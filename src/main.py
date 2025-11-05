@@ -6,20 +6,27 @@ from tkcalendar import DateEntry
 import sqlite3
 import matplotlib.pyplot as plt
 
-from sorts import bubble_sort, quick_sort
+from sorts import bubble_sort, insertion_sort, merge_sort, quick_sort
 from db import insert_inventory
+from db import (
+    get_inventory,
+    insert_inventory,
+    insert_sort_log,
+    setup_database,
+)
+
 
 
 # --------------------------------------------
 # DATABASE HELPER FUNCTION
 # --------------------------------------------
-def get_inventory():
-    conn = sqlite3.connect("inventory.db")
-    c = conn.cursor()
-    c.execute("SELECT product_name, category, price, quantity, expiry_days FROM inventory")
-    rows = c.fetchall()
-    conn.close()
-    return rows
+# def get_inventory():
+#     conn = sqlite3.connect("inventory.db")
+#     c = conn.cursor()
+#     c.execute("SELECT product_name, category, price, quantity, expiry_days FROM inventory")
+#     rows = c.fetchall()
+#     conn.close()
+#     return rows
 
 
 # --------------------------------------------
@@ -33,16 +40,43 @@ def sort_data():
 
     algo = algo_var.get()
 
-    # Sort by expiry_days
+    # 1️⃣ Sort real inventory data by expiry days
     data = [r[4] for r in rows]
     if algo == "Bubble":
         sorted_data, t = bubble_sort(data)
-    else:
+    elif algo == "Quick":
         sorted_data, t = quick_sort(data)
+    elif algo == "Insertion":
+        sorted_data, t = insertion_sort(data)
+    else:  # Merge
+        sorted_data, t = merge_sort(data)
 
-    sorted_pairs = sorted(zip(data, [r[0] for r in rows]))  # expiry + product
+    # Show results for your actual inventory
+    sorted_pairs = sorted(zip(sorted_data, [r[0] for r in rows]))
     result_text = "\n".join([f"{p}: {d} days" for d, p in sorted_pairs])
     messagebox.showinfo("Sorting Done", f"{algo} Sort finished in {t:.4f}s\n\nSorted by expiry:\n{result_text}")
+
+    # 2️⃣ DAA Demonstration: test all algorithms on a large dataset
+    large_data = np.random.randint(1, 10000, size=1000).tolist()
+    algorithms = {
+        "Bubble": bubble_sort,
+        "Quick": quick_sort,
+        "Insertion": insertion_sort,
+        "Merge": merge_sort
+    }
+
+    times = []
+    for name, func in algorithms.items():
+        _, elapsed = func(large_data)
+        times.append((name, elapsed))
+
+    # 3️⃣ Show results in console (optional)
+    print("\nDAA Performance Test:")
+    for name, t in times:
+        print(f"{name} Sort: {t:.4f}s")
+
+
+
 
 
 
@@ -179,7 +213,7 @@ frame1.pack(padx=10, pady=10, fill="x")
 
 algo_var = tk.StringVar(value="Quick")
 ttk.Label(frame1, text="Sort by Expiry using:").pack(side="left", padx=5)
-ttk.OptionMenu(frame1, algo_var, "Quick", "Quick", "Bubble").pack(side="left", padx=5)
+ttk.OptionMenu(frame1, algo_var, "Quick", "Quick", "Bubble", "Insertion", "Merge").pack(side="left", padx=5)
 ttk.Button(frame1, text="Run Sort", command=sort_data).pack(side="left", padx=5)
 
 # ---- AI Reorder Assistant ----
@@ -204,3 +238,5 @@ ttk.Button(frame2, text="Show Inventory", command=show_inventory).grid(row=6, co
 ttk.Button(frame2, text="Show Graph", command=show_graph).grid(row=7, column=0, columnspan=2, pady=5)
 
 root.mainloop()
+
+
